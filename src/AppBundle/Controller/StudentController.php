@@ -6,9 +6,11 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;  
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\JsonResponse;
 
 use AppBundle\Entity\Student;
 use AppBundle\Entity\StudentForm;
+use AppBundle\Entity\StudentFile;
 use AppBundle\Form\FormValidationType;
 use AppBundle\Entity\FormValidation;
 
@@ -24,6 +26,7 @@ use Symfony\Component\Form\Extension\Core\Type\ButtonType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType; 
 use Symfony\Component\Form\Extension\Core\Type\PercentType; 
 use Symfony\Component\Form\Extension\Core\Type\RepeatedType;
+use Symfony\Component\Form\Extension\Core\Type\FileType;
 
 
 class StudentController extends Controller{ 
@@ -148,6 +151,32 @@ class StudentController extends Controller{
 	}
 
 	/**
+		* @Route("/student/newfile")
+	*/
+	public function newfileAction(Request $request) {
+		$student =  new StudentFile();
+		$form = $this->createFormBuilder($student)
+			->add('name', TextType::class)
+			->add('age', TextType::class)
+			->add('photo', FileType::class, array('label'=>'Photo(png,jpeg)'))
+			->add('save', SubmitType::class, array('label'=>'Submit'))
+			->getForm();
+
+		$form->handleRequest($request);
+		if ($form->isSubmitted() && $form->isValid()) {
+			$file = $student->getPhoto();
+			$fileName = md5(uniqid()).'.'.$file->guessExtension();
+			$file->move($this->getParameter('photos_directory'), $filename);
+			$student->setPhoto($fileName);
+			return new Response("User photo is successfully uploaded");
+		} else {
+			return $this->render('student/newFile.html.twig', array(
+				'form' => $form->createView(),
+			));
+		}
+	}
+
+	/**
 		* @Route("/student/validate")
 	*/
 	public function validateAction(Request $request) {
@@ -170,6 +199,29 @@ class StudentController extends Controller{
 		return $this->render('student/validate.html.twig', array(
 			'form' => $form->createView(),
 		));
+	}
+
+	/**
+		* @Route("/student/ajax")
+	*/
+	public function ajaxAction(Request $request) {
+		$students = $this->getDoctrine()
+			->getRepository('AppBundle:Student')
+			->findAll();
+		if ($request->isXmlHttpRequest() || $request->query->get('showJson' == 1)) {
+			$jsonData = array();
+			$idx = 0;
+			foreach ($students as $student) {
+				$temp = array(
+					'name' => $student->getName(),
+					'address' => $student->getAddress(),
+				);
+				$jsonData[$idx++] = $temp;
+			}
+			return new JsonResponse($jsonData);
+		} else {
+			return $this->render('student/ajax.html.twig');
+		}
 	}
 
 }
