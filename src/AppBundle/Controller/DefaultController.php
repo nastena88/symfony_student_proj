@@ -49,4 +49,10 @@ class DefaultController extends Controller
         $this->get('mailer')->send($message);
         return new Response("Mail send");
     }
+    /** 
+       * @Route("/admin") 
+    */ 
+    public function adminLandingAction() { 
+       return new Response('<html><body>This is admin section.</body></html>'); 
+    } 
 }
